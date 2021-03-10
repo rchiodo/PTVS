@@ -166,4 +166,9 @@
       <FileWrites Include="@(LanguageServerFiles)" />
     </ItemGroup>
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>REM From https://dev.azure.com/devdiv/DevDiv/_git/VsixCPS?path=%252Fsrc%252FMicrosoft.VisualStudio.Sdk.Build.VS%252FSdk%252FProjectSystem%252FDeploy%252FVsixDeployProvider.cs&amp;_a=contents&amp;version=GBmaster
+REM using the MSBuild command line to do the registration
+"C:\Program Files\Microsoft Visual Studio\17\Preview\MSBuild\Current\Bin\MSBuild.exe" "$(ProjectPath)" /t:DeployVsixExtensionFiles /p:VSSDKTargetPlatformRegRootSuffix="Exp",DeployingFromVisualStudio=true,DeployExtension=true</PostBuildEvent>
+  </PropertyGroup>
 </Project>
