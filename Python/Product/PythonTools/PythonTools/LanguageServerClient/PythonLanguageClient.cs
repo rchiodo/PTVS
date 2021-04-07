@@ -130,6 +130,7 @@ namespace Microsoft.PythonTools.LanguageServerClient {
 
             _analysisOptions = Site.GetPythonToolsService().AnalysisOptions;
             _advancedEditorOptions = Site.GetPythonToolsService().AdvancedEditorOptions;
+            Site.GetPythonToolsService().LanguageClient = this;
 
             Array.ForEach(_clientContexts, c => c.InterpreterChanged += OnSettingsChanged);
             _analysisOptions.Changed += OnSettingsChanged;
@@ -152,6 +153,7 @@ namespace Microsoft.PythonTools.LanguageServerClient {
                 solutionEvents.ProjectRemoved -= OnProjectRemoved;
                 solutionEvents.BeforeClosing -= OnSolutionClosing;
                 WorkspaceService.OnActiveWorkspaceChanged -= OnWorkspaceOpening;
+                Site.GetPythonToolsService().LanguageClient = null;
             });
 
             return await _server.ActivateAsync();
@@ -260,6 +262,9 @@ namespace Microsoft.PythonTools.LanguageServerClient {
 
         public Task<TResult> InvokeWithParameterObjectAsync<TResult>(string targetName, object argument = null, CancellationToken cancellationToken = default)
             => _rpc == null ? Task.FromResult(default(TResult)) : _rpc.InvokeWithParameterObjectAsync<TResult>(targetName, argument, cancellationToken);
+
+        public Task<object> InvokeTextDocumentSymbols(LSP.DocumentSymbolParams request, CancellationToken cancellationToken)
+            => _rpc == null ? Task.FromResult(default(object)) : _rpc.InvokeWithParameterObjectAsync<object>("textDocument/documentSymbol", request, cancellationToken);
 
         private void OnSettingsChanged(object sender, EventArgs e) => SendDidChangeConfigurations().DoNotWait();
 

@@ -357,6 +357,28 @@
     <Compile Include="PythonTools\LanguageServerClient\WorkspaceFolderChanged\DidChangeWorkspaceFoldersParams.cs" />
     <Compile Include="PythonTools\LanguageServerClient\WorkspaceFolderChanged\WorkspaceFolder.cs" />
     <Compile Include="PythonTools\LanguageServerClient\WorkspaceFolderChanged\WorkspaceFoldersChangeEvent.cs" />
+    <Compile Include="PythonTools\Navigation\CodeWindowManager.cs" />
+    <Compile Include="PythonTools\Navigation\DropDownBarClient.cs" />
+    <Compile Include="PythonTools\Navigation\EditFilter.cs" />
+    <Compile Include="PythonTools\Navigation\Navigable\NavigableSymbol.cs" />
+    <Compile Include="PythonTools\Navigation\Navigable\NavigableSymbolSource.cs" />
+    <Compile Include="PythonTools\Navigation\Navigable\NavigableSymbolSourceProvider.cs" />
+    <Compile Include="PythonTools\Navigation\NavigateTo\PythonNavigateToItemDisplay.cs" />
+    <Compile Include="PythonTools\Navigation\NavigateTo\PythonNavigateToItemDisplayFactory.cs" />
+    <Compile Include="PythonTools\Navigation\NavigateTo\PythonNavigateToItemProvider.cs" />
+    <Compile Include="PythonTools\Navigation\NavigateTo\PythonNavigateToItemProviderFactory.cs" />
+    <Compile Include="PythonTools\Navigation\Peek\PythonPeekableItem.cs" />
+    <Compile Include="PythonTools\Navigation\Peek\PythonPeekableItemSource.cs" />
+    <Compile Include="PythonTools\Navigation\Peek\PythonPeekableItemSourceProvider.cs" />
+    <Compile Include="PythonTools\Navigation\Peek\PythonPeekResultSource.cs" />
+    <Compile Include="PythonTools\Navigation\PythonFileLibraryNode.cs" />
+    <Compile Include="PythonTools\Navigation\PythonLanguageInfo.cs" />
+    <Compile Include="PythonTools\Navigation\PythonLibraryManager.cs" />
+    <Compile Include="PythonTools\Navigation\PythonLibraryNode.cs" />
+    <Compile Include="PythonTools\Navigation\TextViewFilter.cs" />
+    <Compile Include="PythonTools\Navigation\WaitForCompleteAnalysisDialog.xaml.cs">
+      <DependentUpon>WaitForCompleteAnalysisDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="PythonTools\Options\PythonAdvancedEditorOptionsControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1072,6 +1094,10 @@
     <Page Include="PythonTools\Environments\AddVirtualEnvironmentControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PythonTools\Navigation\WaitForCompleteAnalysisDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="PythonTools\Project\ImportWizard\SaveProjectPage.xaml">
       <Generator>MSBuild:Compile</Generator>
