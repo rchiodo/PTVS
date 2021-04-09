@@ -497,17 +497,15 @@ namespace Microsoft.PythonTools.Navigation {
         }
 
         /// <summary>
-        /// Wired to parser event for when the parser has completed parsing a new tree and we need
-        /// to update the navigation bar with the new data.
+        /// Wired to pylance returning symbols for a document
         /// </summary>
         async Task IPythonTextBufferInfoEventSink.PythonTextBufferEventAsync(PythonTextBufferInfo sender, PythonTextBufferInfoEventArgs e) {
-            if (e.Event == PythonTextBufferInfoEvents.NewParseTree) {
-                AnalysisEntry analysisEntry = e.AnalysisEntry;
-                await RefreshNavigationsFromAnalysisEntry(analysisEntry);
+            if (e.Event == PythonTextBufferInfoEvents.NewDocumentSymbols) {
+                await RefreshNavigationsFromSymbols(e.Symbols);
             }
         }
 
-        internal async Task RefreshNavigationsFromAnalysisEntry(AnalysisEntry analysisEntry) {
+        internal async Task RefreshNavigationsFromSymbols(AnalysisEntry analysisEntry) {
             var dropDownBar = _dropDownBar;
             if (dropDownBar == null) {
                 return;

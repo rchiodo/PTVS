@@ -211,7 +211,7 @@ namespace Microsoft.PythonTools.Language {
             }
         }
 
-        internal static LocationCategory GetFindRefLocations(VsProjectAnalyzer analyzer, IServiceProvider serviceProvider, string expr, IReadOnlyList<AnalysisVariable> analysis) {
+        internal static LocationCategory GetFindRefLocations(IServiceProvider serviceProvider, string expr, object symbolResults) {
             Dictionary<LocationInfo, SimpleLocationInfo> references, definitions, values;
             GetDefsRefsAndValues(analyzer, serviceProvider, expr, analysis, out definitions, out references, out values);
 

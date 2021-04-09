@@ -32,9 +32,7 @@ namespace Microsoft.PythonTools.Editor {
 
     internal enum PythonTextBufferInfoEvents {
         None = 0,
-        NewAnalysisEntry,
-        NewParseTree,
-        NewAnalysis,
+        NewDocumentSymbols,
         TextContentChanged,
         TextContentChangedLowPriority,
         ContentTypeChanged,

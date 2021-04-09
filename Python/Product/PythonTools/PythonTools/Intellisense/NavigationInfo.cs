@@ -15,7 +15,12 @@
 // permissions and limitations under the License.
 
 using System;
+using System.Linq;
+using Microsoft.PythonTools.Editor.Core;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
+using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
+
 
 namespace Microsoft.PythonTools.Intellisense {
     class NavigationInfo {
@@ -31,6 +36,47 @@ namespace Microsoft.PythonTools.Intellisense {
             Kind = kind;
             Span = span;
             Children = children;
+        }
+
+        public static NavigationInfo FromDocumentSymbol(object result, ITextView textView) {
+            var documentSymbol = result as LSP.DocumentSymbol;
+            var symbol = result as LSP.SymbolInformation;
+            if (documentSymbol != null) {
+                return new NavigationInfo(
+                    documentSymbol.Name,
+                    KindFromSymbol(documentSymbol.Kind),
+                    textView.GetSnapshotSpan(documentSymbol.Range),
+                    documentSymbol.Children != null ? 
+                        documentSymbol.Children.Select(c => FromDocumentSymbol(c, textView)).ToArray() : 
+                        new NavigationInfo[0]);
+            } 
+            if (symbol != null && symbol.Location.Uri.LocalPath == textView.GetPath()) {
+                return new NavigationInfo(
+                    symbol.Name,
+                    KindFromSymbol(symbol.Kind),
+                    textView.GetSnapshotSpan(symbol.Location.Range),
+                    new NavigationInfo[0]);
+            }
+            return null;
+        }
+
+        private static NavigationKind KindFromSymbol(LSP.SymbolKind documentSymbolKind) {
+            switch (documentSymbolKind) {
+                case LSP.SymbolKind.Class:
+                    return NavigationKind.Class;
+
+                case LSP.SymbolKind.Function:
+                    return NavigationKind.Function;
+
+                case LSP.SymbolKind.Method:
+                    return NavigationKind.ClassMethod;
+
+                case LSP.SymbolKind.Property:
+                    return NavigationKind.Property;
+
+                default:
+                    return NavigationKind.None;
+            }
         }
     }
 

@@ -280,6 +280,8 @@
     <Compile Include="PythonTools\Editor\Formatting\PythonFormatterYapf.cs" />
     <Compile Include="PythonTools\Editor\Formatting\PythonFormatter.cs" />
     <Compile Include="PythonTools\Editor\Formatting\LspDiffTextEditFactory.cs" />
+    <Compile Include="PythonTools\Editor\PythonEditorServices.cs" />
+    <Compile Include="PythonTools\Intellisense\NavigationInfo.cs" />
     <Compile Include="PythonTools\LanguageServerClient\CustomCancellationStrategy.cs" />
     <Compile Include="PythonTools\LanguageServerClient\FileWatcher\Listener.cs" />
     <Compile Include="PythonTools\LanguageServerClient\LiveShareExtensions.cs" />

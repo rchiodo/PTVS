@@ -17,8 +17,11 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Python.Core.Text;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.TextManager.Interop;
+using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
 
 namespace Microsoft.PythonTools.Editor.Core {
     internal static class EditorExtensions {
@@ -62,6 +65,55 @@ namespace Microsoft.PythonTools.Editor.Core {
                 );
             }
             return null;
+        }
+
+        internal static string GetPath(this ITextView textView) {
+            textView.TextBuffer.Properties.TryGetProperty(typeof(IVsTextBuffer), out IVsTextBuffer bufferAdapter);
+            var persistFileFormat = bufferAdapter as IPersistFileFormat;
+
+            if (persistFileFormat == null) {
+                return null;
+            }
+            persistFileFormat.GetCurFile(out string filePath, out _);
+            return filePath;
+        }
+
+        internal static SnapshotSpan GetSnapshotSpan(this ITextView textView, LSP.Range range) {
+            Requires.NotNull(range, nameof(range));
+            Requires.NotNull(textView, nameof(textView));
+
+            return textView.GetSnapshotSpan(range.Start.Line, range.Start.Character, range.End.Line, range.End.Character);
+        }
+
+        internal static SnapshotSpan GetSnapshotSpan(this ITextView textView, int startLine, int? startCharacter, int endLine, int? endCharacter) {
+            if (startLine > endLine || (startLine == endLine && startCharacter > endCharacter)) {
+                return new SnapshotSpan(textView.TextSnapshot, new Span());
+            }
+
+            if (endLine >= textView.TextSnapshot.LineCount) {
+                return new SnapshotSpan(textView.TextSnapshot, new Span());
+            }
+
+            var startSnapshotLine = textView.TextSnapshot.GetLineFromLineNumber(startLine);
+            int startCharacterValue = startCharacter.HasValue ? startCharacter.Value : startSnapshotLine.Length;
+
+            // This should be >, not >=. Lines have one more position than characters, and length gives the number of characters.
+            if (startCharacterValue > startSnapshotLine.Length) {
+                return new SnapshotSpan(textView.TextSnapshot, new Span());
+            }
+
+            var startSnapshotPoint = startSnapshotLine.Start.Add(startCharacterValue);
+
+            var endSnapshotLine = textView.TextSnapshot.GetLineFromLineNumber(endLine);
+            int endCharacterValue = endCharacter.HasValue ? endCharacter.Value : endSnapshotLine.Length;
+
+            if (endCharacterValue > endSnapshotLine.Length) {
+                return new SnapshotSpan(textView.TextSnapshot, new Span());
+            }
+
+            var endSnapshotPoint = endSnapshotLine.Start.Add(endCharacterValue);
+
+            return new SnapshotSpan(startSnapshotPoint, endSnapshotPoint);
         }
 
         // TODO: currently unused, could be deleted

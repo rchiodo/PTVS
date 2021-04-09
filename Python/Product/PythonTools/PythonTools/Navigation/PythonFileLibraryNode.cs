@@ -91,21 +91,7 @@ namespace Microsoft.PythonTools.Navigation {
                     // If there's any result, see what type it is
                     if (result != null) {
                         string expr = criteria.szName.Substring(criteria.szName.LastIndexOf(':') + 1);
-
-                    }
-                }
-                var analysis = node.TryGetAnalysisEntry();
-
-                if (analysis != null) {
-                    string expr = criteria.szName.Substring(criteria.szName.LastIndexOf(':') + 1);
-                    var exprAnalysis = analysis.Analyzer.WaitForRequest(analysis.Analyzer.AnalyzeExpressionAsync(
-                        analysis,
-                        criteria.szName.Substring(criteria.szName.LastIndexOf(':') + 1),
-                        new SourceLocation(1, 1)
-                    ), "PythonFileLibraryNode.DoSearch");
-
-                    if (exprAnalysis != null) {
-                        return EditFilter.GetFindRefLocations(analysis.Analyzer, _hierarchy.ProjectMgr.Site, expr, exprAnalysis.Variables);
+                        return EditFilter.GetFindRefLocations(_hierarchy.ProjectMgr.Site, expr, result);
                     }
                 }
             }
@@ -220,16 +206,22 @@ namespace Microsoft.PythonTools.Navigation {
         }
 
         protected override IEnumerable<CompletionResult> GetChildren() {
-            var analysis = (_hierarchy as PythonFileNode)?.TryGetAnalysisEntry();
-            if (analysis == null) {
-                return Enumerable.Empty<CompletionResult>();
+            var service = this._hierarchy.GetService(typeof(PythonToolsService)) as PythonToolsService;
+            if (service != null && service.LanguageClient != null) {
+                var result = service.LanguageClient.InvokeTextDocumentSymbols(
+                    new LSP.DocumentSymbolParams {
+                        TextDocument = new LSP.TextDocumentIdentifier {
+                            Uri = new System.Uri(this._hierarchy.FileName)
+                        }
+                    },
+                    CancellationToken.None).Result;
+
+                // If there's any result, see what type it is
+                if (result != null) {
+                    return new CompletionResult[0];
+                }
             }
-            var members = analysis.Analyzer.WaitForRequest(analysis.Analyzer.GetAllAvailableMembersAsync(
-                analysis,
-                new SourceLocation(1, 1),
-                GetMemberOptions.ExcludeBuiltins | GetMemberOptions.DetailedInformation
-            ), "PythonFileChildren.GetChildren");
-            return members;
+            return new CompletionResult[0];
         }
 
         protected override string GetName(string member) {
@@ -245,18 +237,22 @@ namespace Microsoft.PythonTools.Navigation {
         }
 
         protected override IEnumerable<CompletionResult> GetChildren() {
-            var analysis = (_hierarchy as PythonFileNode)?.TryGetAnalysisEntry();
-            if (analysis == null) {
-                return Enumerable.Empty<CompletionResult>();
+            var service = this._hierarchy.GetService(typeof(PythonToolsService)) as PythonToolsService;
+            if (service != null && service.LanguageClient != null) {
+                var result = service.LanguageClient.InvokeTextDocumentSymbols(
+                    new LSP.DocumentSymbolParams {
+                        TextDocument = new LSP.TextDocumentIdentifier {
+                            Uri = new System.Uri(this._hierarchy.FileName)
+                        }
+                    },
+                    CancellationToken.None).Result;
+
+                // If there's any result, see what type it is
+                if (result != null) {
+                    return new CompletionResult[0];
+                }
             }
-            var members = analysis.Analyzer.WaitForRequest(analysis.Analyzer.GetMembersAsync(
-                analysis,
-                _member,
-                new SourceLocation(1, 1),
-                GetMemberOptions.ExcludeBuiltins | GetMemberOptions.DetailedInformation | GetMemberOptions.DeclaredOnly |
-                GetMemberOptions.NoMemberRecursion
-            ), "MemberChildren.GetChildren");
-            return members;
+            return new CompletionResult[0];
         }
 
         protected override string GetName(string member) {
