@@ -38,6 +38,26 @@ namespace Microsoft.PythonTools.Intellisense {
             Children = children;
         }
 
+        public static NavigationInfo FromDocumentSymbols(object result, ITextView textView) {
+            var documentSymbols = result as LSP.DocumentSymbol[];
+            var symbols = result as LSP.SymbolInformation[];
+            if (documentSymbols != null) {
+                return new NavigationInfo(
+                    null,
+                    NavigationKind.None,
+                    new SnapshotSpan(),
+                    documentSymbols.Select(s => FromDocumentSymbol(s, textView)).ToArray());
+            }
+            if (symbols != null) {
+                return new NavigationInfo(
+                    null,
+                    NavigationKind.None,
+                    new SnapshotSpan(),
+                    symbols.Select(s => FromDocumentSymbol(s, textView)).ToArray());
+            }
+            return NavigationInfo.Empty;
+        }
+
         public static NavigationInfo FromDocumentSymbol(object result, ITextView textView) {
             var documentSymbol = result as LSP.DocumentSymbol;
             var symbol = result as LSP.SymbolInformation;
@@ -57,7 +77,7 @@ namespace Microsoft.PythonTools.Intellisense {
                     textView.GetSnapshotSpan(symbol.Location.Range),
                     new NavigationInfo[0]);
             }
-            return null;
+            return NavigationInfo.Empty;
         }
 
         private static NavigationKind KindFromSymbol(LSP.SymbolKind documentSymbolKind) {

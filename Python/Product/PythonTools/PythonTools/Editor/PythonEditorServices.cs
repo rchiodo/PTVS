@@ -54,10 +54,6 @@ namespace Microsoft.PythonTools.Editor {
         public PythonEditorServices([Import(typeof(SVsServiceProvider))] IServiceProvider site) {
             Site = site;
             _componentModel = new Lazy<IComponentModel>(site.GetComponentModel);
-            _errorTaskProvider = new Lazy<ErrorTaskProvider>(CreateTaskProvider<ErrorTaskProvider>);
-            _commentTaskProvider = new Lazy<CommentTaskProvider>(CreateTaskProvider<CommentTaskProvider>);
-            _mismatchedEncodingSquiggleProvider = new Lazy<InvalidEncodingSquiggleProvider>(CreateSquiggleProvider<InvalidEncodingSquiggleProvider>);
-            _previewChangesService = new Lazy<PreviewChangesService>(() => _componentModel.Value.GetService<PreviewChangesService>());
             _featureFlags = new Lazy<IVsFeatureFlags>(() => (IVsFeatureFlags)site.GetService(typeof(SVsFeatureFlags)));
         }
 
@@ -83,7 +79,7 @@ namespace Microsoft.PythonTools.Editor {
         #endregion
 
         public PythonTextBufferInfo GetBufferInfo(ITextBuffer textBuffer) {
-            return PythonTextBufferInfo.ForBuffer(this, textBuffer);
+            return PythonTextBufferInfo.ForBuffer(Site, textBuffer);
         }
 
         private readonly Lazy<IComponentModel> _componentModel;
@@ -125,10 +121,6 @@ namespace Microsoft.PythonTools.Editor {
         [Import]
         public IIncrementalSearchFactoryService IncrementalSearch = null;
 
-        // Cannot compose this service for mocks, so it's a traditional Lazy
-        private Lazy<PreviewChangesService> _previewChangesService = null;
-        public PreviewChangesService PreviewChangesService => _previewChangesService.Value;
-
         [Import]
         public ITextMarkerProviderFactory TextMarkerProviderFactory = null;
 
@@ -148,40 +140,5 @@ namespace Microsoft.PythonTools.Editor {
         internal IVsFeatureFlags FeatureFlags => _featureFlags.Value;
 
         public IVsTextManager2 VsTextManager2 => (IVsTextManager2)Site.GetService(typeof(SVsTextManager));
-
-        #region Task Providers
-
-        private readonly Lazy<ErrorTaskProvider> _errorTaskProvider;
-        public ErrorTaskProvider ErrorTaskProvider => _errorTaskProvider.Value;
-        public ErrorTaskProvider MaybeErrorTaskProvider => _errorTaskProvider.IsValueCreated ? _errorTaskProvider.Value : null;
-
-        private readonly Lazy<CommentTaskProvider> _commentTaskProvider;
-        public CommentTaskProvider CommentTaskProvider => _commentTaskProvider.Value;
-        public CommentTaskProvider MaybeCommentTaskProvider => _commentTaskProvider.IsValueCreated ? _commentTaskProvider.Value : null;
-
-        private readonly Lazy<InvalidEncodingSquiggleProvider> _mismatchedEncodingSquiggleProvider;
-        public InvalidEncodingSquiggleProvider InvalidEncodingSquiggleProvider => _mismatchedEncodingSquiggleProvider.Value;
-        public InvalidEncodingSquiggleProvider MaybeInvalidEncodingSquiggleProvider => _mismatchedEncodingSquiggleProvider.IsValueCreated ? _mismatchedEncodingSquiggleProvider.Value : null;
-
-        private T CreateTaskProvider<T>() where T : class {
-            if (VsProjectAnalyzer.SuppressTaskProvider) {
-                return null;
-            }
-            return (T)Site.GetService(typeof(T));
-        }
-
-        private T CreateSquiggleProvider<T>() where T : class {
-            if (VsProjectAnalyzer.SuppressTaskProvider) {
-                return null;
-            }
-            var errorProvider = ErrorTaskProvider;
-            if (errorProvider == null) {
-                return null;
-            }
-
-            return (T)Activator.CreateInstance(typeof(T), new object[] { Site, errorProvider });
-        }
-
-        #endregion
     }
 }

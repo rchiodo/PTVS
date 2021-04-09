@@ -20,13 +20,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using Microsoft.PythonTools.Analysis;
 using Microsoft.PythonTools.Editor;
 using Microsoft.PythonTools.Editor.Core;
 using Microsoft.PythonTools.Infrastructure;
 using Microsoft.PythonTools.Intellisense;
 using Microsoft.PythonTools.Navigation;
-using Microsoft.PythonTools.Refactoring;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.OLE.Interop;
@@ -73,7 +71,7 @@ namespace Microsoft.PythonTools.Language {
             _textView = textView;
             _next = next;
 
-            BraceMatcher.WatchBraceHighlights(_editorServices, textView);
+            // TODO: Brace matching? How do we support this in the pylance situation? It required parse tokens
 
             if (_next == null && vsTextView != null) {
                 ErrorHandler.ThrowOnFailure(vsTextView.AddCommandFilter(this, out _next));
@@ -106,86 +104,6 @@ namespace Microsoft.PythonTools.Language {
                 textView,
                 next
             ));
-        }
-
-        /// <summary>
-        /// Implements Goto Definition.  Called when the user selects Goto Definition from the 
-        /// context menu or hits the hotkey associated with Goto Definition.
-        /// 
-        /// If there is 1 and only one definition immediately navigates to it.  If there are
-        /// no references displays a dialog box to the user.  Otherwise it opens the find
-        /// symbols dialog with the list of results.
-        /// </summary>
-        private async void GotoDefinition() {
-            UpdateStatusForIncompleteAnalysis();
-
-            var caret = _textView.GetPythonCaret();
-            var analysis = _textView.GetAnalysisAtCaret(_editorServices.Site);
-            if (analysis != null && caret != null) {
-                var defs = await analysis.Analyzer.AnalyzeExpressionAsync(analysis, caret.Value, ExpressionAtPointPurpose.FindDefinition);
-                if (defs == null) {
-                    return;
-                }
-                Dictionary<LocationInfo, SimpleLocationInfo> references, definitions, values;
-                GetDefsRefsAndValues(analysis.Analyzer, _editorServices.Site, defs.Expression, defs.Variables, out definitions, out references, out values);
-
-                if ((values.Count + definitions.Count) == 1) {
-                    if (values.Count != 0) {
-                        foreach (var location in values.Keys) {
-                            GotoLocation(location);
-                            break;
-                        }
-                    } else {
-                        foreach (var location in definitions.Keys) {
-                            GotoLocation(location);
-                            break;
-                        }
-                    }
-                } else if (values.Count + definitions.Count == 0) {
-                    if (String.IsNullOrWhiteSpace(defs.Expression)) {
-                        MessageBox.Show(Strings.CannotGoToDefn, Strings.ProductTitle);
-                    } else {
-                        MessageBox.Show(Strings.CannotGoToDefn_Name.FormatUI(defs.Expression), Strings.ProductTitle);
-                    }
-                } else if (definitions.Count == 0) {
-                    ShowFindSymbolsDialog(defs.Expression, new SymbolList(Strings.SymbolListValues, StandardGlyphGroup.GlyphForwardType, values.Values));
-                } else if (values.Count == 0) {
-                    ShowFindSymbolsDialog(defs.Expression, new SymbolList(Strings.SymbolListDefinitions, StandardGlyphGroup.GlyphLibrary, definitions.Values));
-                } else {
-                    ShowFindSymbolsDialog(defs.Expression,
-                        new LocationCategory(
-                            new SymbolList(Strings.SymbolListDefinitions, StandardGlyphGroup.GlyphLibrary, definitions.Values),
-                            new SymbolList(Strings.SymbolListValues, StandardGlyphGroup.GlyphForwardType, values.Values)
-                        )
-                    );
-                }
-            }
-        }
-
-        /// <summary>
-        /// Moves the caret to the specified location, staying in the current text view 
-        /// if possible.
-        /// 
-        /// https://pytools.codeplex.com/workitem/1649
-        /// </summary>
-        private void GotoLocation(LocationInfo location) {
-            Debug.Assert(location != null);
-            Debug.Assert(location.StartLine > 0);
-            Debug.Assert(location.StartColumn > 0);
-
-            if (PathUtils.IsSamePath(location.FilePath, _textView.GetFilePath())) {
-                var viewAdapter = _vsTextView;
-                viewAdapter.SetCaretPos(location.StartLine - 1, location.StartColumn - 1);
-                viewAdapter.CenterLines(location.StartLine - 1, 1);
-            } else {
-                PythonToolsPackage.NavigateTo(
-                    _editorServices.Site,
-                    location.FilePath,
-                    Guid.Empty,
-                    location.StartLine - 1,
-                    location.StartColumn - 1
-                );
-            }
         }
 
         /// <summary>
@@ -612,10 +530,7 @@ namespace Microsoft.PythonTools.Language {
 
         private void UpdateStatusForIncompleteAnalysis() {
             var statusBar = (IVsStatusbar)_editorServices.Site.GetService(typeof(SVsStatusbar));
-            var analyzer = _textView.GetAnalyzerAtCaret(_editorServices.Site);
-            if (analyzer != null && analyzer.IsAnalyzing) {
-                statusBar.SetText(Strings.SourceAnalysisNotUpToDate);
-            }
+            statusBar.SetText(Strings.SourceAnalysisNotUpToDate);
         }
 
         #region IOleCommandTarget Members
@@ -636,24 +551,6 @@ namespace Microsoft.PythonTools.Language {
             // preprocessing
             if (pguidCmdGroup == VSConstants.GUID_VSStandardCommandSet97) {
                 switch ((VSConstants.VSStd97CmdID)nCmdID) {
-                    case VSConstants.VSStd97CmdID.Paste:
-                        if (!_editorServices.Python.AdvancedOptions.PasteRemovesReplPrompts) {
-                            // Not stripping prompts, so don't use our logic
-                            break;
-                        }
-                        var beforePaste = _textView.TextSnapshot;
-                        if (_editorServices.EditOperationsFactory.GetEditorOperations(_textView).Paste()) {
-                            var afterPaste = _textView.TextSnapshot;
-                            var um = _editorServices.UndoManagerFactory.GetTextBufferUndoManager(afterPaste.TextBuffer);
-                            using (var undo = um.TextBufferUndoHistory.CreateTransaction(Strings.RemoveReplPrompts)) {
-                                if (ReplPromptHelpers.RemovePastedPrompts(beforePaste, afterPaste)) {
-                                    undo.Complete();
-                                }
-                            }
-                            return VSConstants.S_OK;
-                        }
-                        break;
-                    case VSConstants.VSStd97CmdID.GotoDefn: GotoDefinition(); return VSConstants.S_OK;
                     case VSConstants.VSStd97CmdID.FindReferences: FindAllReferences(); return VSConstants.S_OK;
                 }
             } else if (pguidCmdGroup == VSConstants.VsStd12) {
@@ -669,7 +566,6 @@ namespace Microsoft.PythonTools.Language {
                 }
             } else if (pguidCmdGroup == CommonConstants.Std2KCmdGroupGuid) {
                 SnapshotPoint? pyPoint;
-                IntellisenseController controller;
                 switch ((VSConstants.VSStd2KCmdID)nCmdID) {
                     case VSConstants.VSStd2KCmdID.RETURN:
                         pyPoint = _textView.GetPythonCaret();
@@ -708,66 +604,38 @@ namespace Microsoft.PythonTools.Language {
                         return VSConstants.S_OK;
                     case VSConstants.VSStd2KCmdID.SHOWMEMBERLIST:
                     case VSConstants.VSStd2KCmdID.COMPLETEWORD:
-                        if (_textView.Properties.TryGetProperty(typeof(IntellisenseController), out controller)) {
-                            controller.TriggerCompletionSession(
-                                (VSConstants.VSStd2KCmdID)nCmdID == VSConstants.VSStd2KCmdID.COMPLETEWORD,
-                                '\0',
-                                true
-                            ).DoNotWait();
-                            return VSConstants.S_OK;
-                        }
                         break;
 
                     case VSConstants.VSStd2KCmdID.QUICKINFO:
-                        if (_textView.Properties.TryGetProperty(typeof(IntellisenseController), out controller)) {
-                            controller.TriggerQuickInfoAsync().DoNotWait();
-                            return VSConstants.S_OK;
-                        }
                         break;
 
                     case VSConstants.VSStd2KCmdID.PARAMINFO:
-                        if (_textView.Properties.TryGetProperty(typeof(IntellisenseController), out controller)) {
-                            controller.TriggerSignatureHelp();
-                            return VSConstants.S_OK;
-                        }
                         break;
                     case VSConstants.VSStd2KCmdID.OUTLN_STOP_HIDING_ALL:
-                        _textView.GetOutliningTagger()?.Disable(_textView.TextSnapshot);
                         // let VS get the event as well
                         break;
 
                     case VSConstants.VSStd2KCmdID.OUTLN_START_AUTOHIDING:
-                        _textView.GetOutliningTagger()?.Enable(_textView.TextSnapshot);
                         // let VS get the event as well
                         break;
                     case VSConstants.VSStd2KCmdID.COMMENT_BLOCK:
                     case VSConstants.VSStd2KCmdID.COMMENTBLOCK:
-                        if (_textView.CommentOrUncommentBlock(comment: true)) {
-                            return VSConstants.S_OK;
-                        }
                         break;
 
                     case VSConstants.VSStd2KCmdID.UNCOMMENT_BLOCK:
                     case VSConstants.VSStd2KCmdID.UNCOMMENTBLOCK:
-                        if (_textView.CommentOrUncommentBlock(comment: false)) {
-                            return VSConstants.S_OK;
-                        }
                         break;
                     case VSConstants.VSStd2KCmdID.EXTRACTMETHOD:
-                        ExtractMethod();
-                        return VSConstants.S_OK;
+                        break;
                     case VSConstants.VSStd2KCmdID.RENAME:
-                        RefactorRename();
-                        return VSConstants.S_OK;
+                        break;
                 }
-            } else if (pguidCmdGroup == GuidList.guidPythonToolsCmdSet) {
+            } else if (pguidCmdGroup == Common.CommonGuidList.guidPythonToolsCmdSet) {
                 switch (nCmdID) {
                     case PkgCmdIDList.cmdidRefactorRenameIntegratedShell:
-                        RefactorRename();
-                        return VSConstants.S_OK;
+                        break;
                     case PkgCmdIDList.cmdidExtractMethodIntegratedShell:
-                        ExtractMethod();
-                        return VSConstants.S_OK;
+                        break;
                     case CommonConstants.StartDebuggingCmdId:
                     case CommonConstants.StartWithoutDebuggingCmdId:
                         PythonToolsPackage.LaunchFile(_editorServices.Site, _textView.GetFilePath(), nCmdID == CommonConstants.StartDebuggingCmdId, true);
@@ -779,10 +647,6 @@ namespace Microsoft.PythonTools.Language {
             return _next.Exec(pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
         }
 
-
-        private void ExtractMethod() {
-            new Refactoring.MethodExtractor(_editorServices, _textView).ExtractMethod(new ExtractMethodUserInput(_editorServices.Site)).DoNotWait();
-        }
 
         internal async Task FormatDocumentAsync() {
             var pyPoint = _textView.GetPythonCaret();
@@ -799,33 +663,7 @@ namespace Microsoft.PythonTools.Language {
         }
 
         private async Task FormatCodeAsync(SnapshotSpan span, bool selectResult) {
-            var entry = span.Snapshot.TextBuffer.TryGetAnalysisEntry();
-            if (entry == null) {
-                return;
-            }
-
-            var options = _editorServices.Python.GetCodeFormattingOptions();
-            options.NewLineFormat = _textView.Options.GetNewLineCharacter();
-
-            await entry.Analyzer.FormatCodeAsync(span, _textView, options, selectResult);
-        }
-
-        internal void RefactorRename() {
-            var analyzer = _textView.GetAnalyzerAtCaret(_editorServices.Site);
-            if (analyzer.IsAnalyzing) {
-                var dialog = new WaitForCompleteAnalysisDialog(analyzer);
-
-                var res = dialog.ShowModal();
-                if (res != true) {
-                    // user cancelled dialog before analysis completed...
-                    return;
-                }
-            }
-
-            new VariableRenamer(_textView, _editorServices.Site).RenameVariable(
-                new RenameVariableUserInput(_editorServices.Site),
-                (IVsPreviewChangesService)_editorServices.Site.GetService(typeof(SVsPreviewChangesService))
-            ).DoNotWait();
+            // TODO: Handle formatting using stuff like black/autopeop8 etc
         }
 
         private const uint CommandDisabledAndHidden = (uint)(OLECMDF.OLECMDF_INVISIBLE | OLECMDF.OLECMDF_SUPPORTED | OLECMDF.OLECMDF_DEFHIDEONCTXTMENU);
@@ -861,7 +699,7 @@ namespace Microsoft.PythonTools.Language {
                             return VSConstants.S_OK;
                     }
                 }
-            } else if (pguidCmdGroup == GuidList.guidPythonToolsCmdSet) {
+            } else if (pguidCmdGroup == Common.CommonGuidList.guidPythonToolsCmdSet) {
                 for (int i = 0; i < cCmds; i++) {
                     switch (prgCmds[i].cmdID) {
                         case PkgCmdIDList.cmdidRefactorRenameIntegratedShell:
@@ -913,17 +751,9 @@ namespace Microsoft.PythonTools.Language {
                             return VSConstants.S_OK;
 
                         case VSConstants.VSStd2KCmdID.OUTLN_STOP_HIDING_ALL:
-                            if (_textView.GetOutliningTagger()?.Enabled == true) {
-                                prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
-                                return VSConstants.S_OK;
-                            }
                             break;
 
                         case VSConstants.VSStd2KCmdID.OUTLN_START_AUTOHIDING:
-                            if (_textView.GetOutliningTagger()?.Enabled == false) {
-                                prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
-                                return VSConstants.S_OK;
-                            }
                             break;
 
                         case VSConstants.VSStd2KCmdID.COMMENT_BLOCK:
@@ -933,39 +763,14 @@ namespace Microsoft.PythonTools.Language {
                             prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
                             return VSConstants.S_OK;
                         case VSConstants.VSStd2KCmdID.EXTRACTMETHOD:
-                            QueryStatusExtractMethod(prgCmds, i);
-                            return VSConstants.S_OK;
+                            break;
                         case VSConstants.VSStd2KCmdID.RENAME:
-                            QueryStatusRename(prgCmds, i);
-                            return VSConstants.S_OK;
+                            break;
                     }
                 }
             }
 
             return _next.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
-        }
-
-        private void QueryStatusExtractMethod(OLECMD[] prgCmds, int i) {
-            switch (Refactoring.MethodExtractor.CanExtract(_textView)) {
-                case true:
-                    prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
-                    break;
-                case false:
-                    prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_SUPPORTED);
-                    break;
-                case null:
-                    prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_INVISIBLE);
-                    break;
-            }
-        }
-
-        private void QueryStatusRename(OLECMD[] prgCmds, int i) {
-            var analyzer = _textView.GetAnalyzerAtCaret(_editorServices.Site);
-            if (analyzer != null && _textView.GetPythonBufferAtCaret() != null) {
-                prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
-            } else {
-                prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_INVISIBLE);
-            }
         }
 
 #endregion

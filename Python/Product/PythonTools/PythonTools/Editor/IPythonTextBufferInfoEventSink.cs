@@ -67,4 +67,13 @@ namespace Microsoft.PythonTools.Editor {
 
         public PythonTextBufferInfo NewTextBufferInfo { get; }
     }
+
+    internal class PythonNewDocumentSymbolsEventArgs : PythonTextBufferInfoEventArgs {
+        public PythonNewDocumentSymbolsEventArgs(PythonTextBufferInfoEvents eventType, object symbols)
+            : base(eventType) {
+            Symbols = symbols;
+        }
+
+        public object Symbols { get; }
+    }
 }

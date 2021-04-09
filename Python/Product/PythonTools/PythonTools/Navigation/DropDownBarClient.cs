@@ -29,6 +29,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudioTools;
 using Microsoft.VisualStudioTools.Project;
+using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
 
 namespace Microsoft.PythonTools.Navigation {
     /// <summary>
@@ -500,18 +501,22 @@ namespace Microsoft.PythonTools.Navigation {
         /// Wired to pylance returning symbols for a document
         /// </summary>
         async Task IPythonTextBufferInfoEventSink.PythonTextBufferEventAsync(PythonTextBufferInfo sender, PythonTextBufferInfoEventArgs e) {
-            if (e.Event == PythonTextBufferInfoEvents.NewDocumentSymbols) {
-                await RefreshNavigationsFromSymbols(e.Symbols);
+            if (e.Event == PythonTextBufferInfoEvents.NewDocumentSymbols && e is PythonNewDocumentSymbolsEventArgs docArgs) {
+                await RefreshNavigationsFromSymbols(docArgs.Symbols);
             }
         }
 
-        internal async Task RefreshNavigationsFromSymbols(AnalysisEntry analysisEntry) {
+        internal async Task RefreshNavigationsFromSymbols(object symbols) {
             var dropDownBar = _dropDownBar;
             if (dropDownBar == null) {
                 return;
             }
 
-            var navigations = await _uiThread.InvokeTask(() => analysisEntry.Analyzer.GetNavigationsAsync(_textView.TextSnapshot));
+            // Get the navigations from the symbols
+            var docSymbols = symbols as LSP.DocumentSymbol[];
+            var normalSymbols = symbols as LSP.SymbolInformation[];
+
+            var navigations = NavigationInfo.FromDocumentSymbols(symbols, _textView);
             lock (_navigationsLock) {
                 _navigations = navigations;
                 for (int i = 0; i < _curSelection.Length; i++) {
