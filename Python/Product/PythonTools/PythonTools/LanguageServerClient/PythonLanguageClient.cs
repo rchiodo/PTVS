@@ -266,6 +266,9 @@ namespace Microsoft.PythonTools.LanguageServerClient {
         public Task<object> InvokeTextDocumentSymbols(LSP.DocumentSymbolParams request, CancellationToken cancellationToken)
             => _rpc == null ? Task.FromResult(default(object)) : _rpc.InvokeWithParameterObjectAsync<object>("textDocument/documentSymbol", request, cancellationToken);
 
+        public Task<LSP.Location[]> InvokeReferences(LSP.ReferenceParams request, CancellationToken cancellationToken)
+            => _rpc == null ? Task.FromResult<LSP.Location[]>(null) : _rpc.InvokeWithParameterObjectAsync<LSP.Location[]>("textDocument/references", request, cancellationToken);
+
         private void OnSettingsChanged(object sender, EventArgs e) => SendDidChangeConfigurations().DoNotWait();
 
         private void OnAnalysisComplete(object sender, EventArgs e) {

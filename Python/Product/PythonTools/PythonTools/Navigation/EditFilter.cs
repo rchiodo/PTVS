@@ -38,6 +38,9 @@ using Microsoft.VisualStudioTools;
 using Microsoft.VisualStudioTools.Navigation;
 using IServiceProvider = System.IServiceProvider;
 using Task = System.Threading.Tasks.Task;
+using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
+using System.Threading;
+using Microsoft.VisualStudio.Text.Operations;
 
 namespace Microsoft.PythonTools.Language {
     /// <summary>
@@ -59,6 +62,7 @@ namespace Microsoft.PythonTools.Language {
         private readonly IVsTextView _vsTextView;
         private readonly ITextView _textView;
         private readonly IOleCommandTarget _next;
+        private readonly ITextStructureNavigator _navigator;
 
         private EditFilter(
             PythonEditorServices editorServices,
@@ -70,6 +74,7 @@ namespace Microsoft.PythonTools.Language {
             _vsTextView = vsTextView;
             _textView = textView;
             _next = next;
+            _navigator = editorServices.NavigatorService.GetTextStructureNavigator(_textView.TextBuffer);
 
             // TODO: Brace matching? How do we support this in the pylance situation? It required parse tokens
 
@@ -116,21 +121,31 @@ namespace Microsoft.PythonTools.Language {
             UpdateStatusForIncompleteAnalysis();
 
             var caret = _textView.GetPythonCaret();
-            var analysis = _textView.GetAnalysisAtCaret(_editorServices.Site);
-            if (analysis != null && caret != null) {
-                var references = await analysis.Analyzer.AnalyzeExpressionAsync(analysis, caret.Value, ExpressionAtPointPurpose.FindDefinition);
-                if (references == null) {
-                    return;
+            var service = _editorServices.TryGetPythonToolsService();
+            if (service != null && service.LanguageClient != null) {
+                var results = await service.LanguageClient.InvokeReferences(
+                    new LSP.ReferenceParams {
+                        TextDocument = new LSP.TextDocumentIdentifier {
+                            Uri = new System.Uri(_textView.GetFilePath())
+                        }
+                        Position = new LSP.Position(_textView.GetSnapshotSpan)
+                    },
+                    CancellationToken.None);
+                if (results != null && caret != null) {
+                    var extent = _navigator.GetExtentOfWord((SnapshotPoint)caret);
+                    if (!extent.IsSignificant) {
+                        return;
+                    }
+
+                    var locations = GetFindRefLocations(_editorServices.Site, extent.ToString(), results);
+
+                    ShowFindSymbolsDialog(extent.ToString(), locations);
                 }
-
-                var locations = GetFindRefLocations(analysis.Analyzer, _editorServices.Site, references.Expression, references.Variables);
-
-                ShowFindSymbolsDialog(references.Expression, locations);
             }
         }
 
-        internal static LocationCategory GetFindRefLocations(IServiceProvider serviceProvider, string expr, object symbolResults) {
-            Dictionary<LocationInfo, SimpleLocationInfo> references, definitions, values;
+        internal static LocationCategory GetFindRefLocations(IServiceProvider serviceProvider, string expr, object referenceResults) {
+            Dictionary<NavigationInfo, SimpleLocationInfo> references, definitions, values;
             GetDefsRefsAndValues(analyzer, serviceProvider, expr, analysis, out definitions, out references, out values);
 
             var locations = new LocationCategory(
@@ -141,18 +156,21 @@ namespace Microsoft.PythonTools.Language {
             return locations;
         }
 
-        private static void GetDefsRefsAndValues(VsProjectAnalyzer analyzer, IServiceProvider serviceProvider, string expr, IReadOnlyList<AnalysisVariable> variables, out Dictionary<LocationInfo, SimpleLocationInfo> definitions, out Dictionary<LocationInfo, SimpleLocationInfo> references, out Dictionary<LocationInfo, SimpleLocationInfo> values) {
-            references = new Dictionary<LocationInfo, SimpleLocationInfo>();
-            definitions = new Dictionary<LocationInfo, SimpleLocationInfo>();
-            values = new Dictionary<LocationInfo, SimpleLocationInfo>();
+        private static void GetDefsRefsAndValues(IServiceProvider serviceProvider, string expr, object referenceResults, out Dictionary<LSP.Location, SimpleLocationInfo> definitions, out Dictionary<LSP.Location, SimpleLocationInfo> references, out Dictionary<LSP.Location, SimpleLocationInfo> values) {
+            references = new Dictionary<LSP.Location, SimpleLocationInfo>();
+            definitions = new Dictionary<NavigationInfo, SimpleLocationInfo>();
+            values = new Dictionary<NavigationInfo, SimpleLocationInfo>();
 
-            if (variables == null) {
-                Debug.Fail("unexpected null variables");
+            if (symbolResults == null) {
+                Debug.Fail("unexpected null results");
                 return;
             }
 
-            foreach (var v in variables) {
-                if (v?.Location == null) {
+            // Turn results into navigation info
+            var navigations = NavigationInfo.FromDocumentSymbols(symbolResults, textView);
+
+            foreach (var v in navigations.Children) {
+                if (v?.Span.Snapshot.GetP == null) {
                     Debug.Fail("unexpected null variable or location");
                     continue;
                 }

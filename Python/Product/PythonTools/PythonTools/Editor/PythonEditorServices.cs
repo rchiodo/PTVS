@@ -130,6 +130,9 @@ namespace Microsoft.PythonTools.Editor {
         [Import]
         public IGlyphService GlyphService = null;
 
+        [Import]
+        public ITextStructureNavigatorSelectorService NavigatorService = null;
+
 #if !USE_15_5
         [Import(AllowDefault = true)]
         private Lazy<IPatternMatcherFactory> _patternMatcherFactory = null;
