@@ -149,22 +149,17 @@ namespace Microsoft.PythonTools.Repl {
                 evaluator = selEvaluator.Evaluator as PythonCommonInteractiveEvaluator;
             }
 
-            // TODO: Pylance
             // Activation will now be automatic, but we'll still need to maintain a ReplDocument
-            //if (evaluator != null) {
-            //    var context = new PythonLanguageClientContextRepl(evaluator, ContentType.TypeName);
-            //    await PythonLanguageClient.EnsureLanguageClientAsync(
-            //        _serviceProvider,
-            //        ThreadHelper.JoinableTaskContext,
-            //        context
-            //    );
-
-            //    var client = PythonLanguageClient.FindLanguageClient(ContentType.TypeName);
-            //    if (client != null) {
-            //        Document = new ReplDocument(_serviceProvider, _window, client);
-            //        await Document.InitializeAsync();
-            //    }
-            //}
+            if (evaluator != null) {
+                //rce
+                //await PythonLanguageClient.ReadyTask;
+                var client = _serviceProvider.GetPythonToolsService().LanguageClient;
+                if (client != null) {
+                    client.AddClientContext(new PythonLanguageClientContextRepl(evaluator), true);
+                    Document = new ReplDocument(_serviceProvider, _window, client);
+                    await Document.InitializeAsync();
+                }
+            }
         }
 
         internal async Task RestartLanguageServerAsync() {

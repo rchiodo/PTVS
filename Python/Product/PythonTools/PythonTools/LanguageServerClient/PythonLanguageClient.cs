@@ -85,7 +85,7 @@ namespace Microsoft.PythonTools.LanguageServerClient {
         public static Task ReadyTask => _readyTcs.Task;
 
         private readonly DisposableBag _disposables;
-        private IPythonLanguageClientContext[] _clientContexts;
+        private List<IPythonLanguageClientContext> _clientContexts = new List<IPythonLanguageClientContext>();
         private PythonAnalysisOptions _analysisOptions;
         private PythonAdvancedEditorOptions _advancedEditorOptions;
         private LanguageServer _server;
@@ -127,12 +127,10 @@ namespace Microsoft.PythonTools.LanguageServerClient {
             await JoinableTaskContext.Factory.SwitchToMainThreadAsync();
             Site.GetPythonToolsService().LanguageClient = this;
 
-            _clientContexts = CreateClientContexts();
+            CreateClientContexts();
 
             _analysisOptions = Site.GetPythonToolsService().AnalysisOptions;
             _advancedEditorOptions = Site.GetPythonToolsService().AdvancedEditorOptions;
-
-            Array.ForEach(_clientContexts, c => c.InterpreterChanged += OnSettingsChanged);
             _analysisOptions.Changed += OnSettingsChanged;
             _advancedEditorOptions.Changed += OnSettingsChanged;
             var dte = (EnvDTE80.DTE2)Site.GetService(typeof(EnvDTE.DTE));
@@ -144,10 +142,11 @@ namespace Microsoft.PythonTools.LanguageServerClient {
             WorkspaceService.OnActiveWorkspaceChanged += OnWorkspaceOpening;
 
             _disposables.Add(() => {
-                Array.ForEach(_clientContexts, c => c.InterpreterChanged -= OnSettingsChanged);
+                _clientContexts.ForEach(c => c.InterpreterChanged -= OnSettingsChanged);
                 _analysisOptions.Changed -= OnSettingsChanged;
                 _advancedEditorOptions.Changed -= OnSettingsChanged;
-                Array.ForEach(_clientContexts, c => c.Dispose());
+                _clientContexts.ForEach(c => c.Dispose());
+                _clientContexts.Clear();
                 solutionEvents.Opened -= OnSolutionOpened;
                 solutionEvents.ProjectAdded -= OnProjectAdded;
                 solutionEvents.ProjectRemoved -= OnProjectRemoved;
@@ -236,6 +235,14 @@ namespace Microsoft.PythonTools.LanguageServerClient {
         }
 
         public void Dispose() => _disposables.TryDispose();
+
+        public void AddClientContext(IPythonLanguageClientContext context, bool fireSettingsChanged = false) {
+            _clientContexts.Add(context);
+            context.InterpreterChanged += OnSettingsChanged;
+            if (fireSettingsChanged) {
+                SendDidChangeConfiguration(context).DoNotWait();
+            }
+        }
 
         public Task InvokeTextDocumentDidOpenAsync(LSP.DidOpenTextDocumentParams request)
             => _rpc == null ? Task.CompletedTask : _rpc.NotifyWithParameterObjectAsync("textDocument/didOpen", request);
@@ -415,18 +422,17 @@ namespace Microsoft.PythonTools.LanguageServerClient {
             _fileListener?.AddPatterns(e.Watchers);
         }
 
-        private IPythonLanguageClientContext[] CreateClientContexts() {
+        private void CreateClientContexts() {
             if (PythonWorkspaceContextProvider.Workspace != null) {
-                return new IPythonLanguageClientContext[] { new PythonLanguageClientContextWorkspace(PythonWorkspaceContextProvider.Workspace) };
+                AddClientContext(new PythonLanguageClientContextWorkspace(PythonWorkspaceContextProvider.Workspace));
             }
-
-            if (ProjectContextProvider.ProjectNodes.MaybeEnumerate().Any()) {
+            else {
                 var nodes = from n in ProjectContextProvider.ProjectNodes
                             select new PythonLanguageClientContextProject(n);
-                return nodes.ToArray();
+                foreach (var n in nodes) {
+                    AddClientContext(n);
+                }
             }
-
-            return new IPythonLanguageClientContext[] { new PythonLanguageClientContextGlobal(OptionsService) };
         }
 
         // This is all a hack until VSSDK LanguageServer can handle workspace folders and dynamic registration
