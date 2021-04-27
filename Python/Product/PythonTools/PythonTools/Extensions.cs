@@ -847,9 +847,13 @@ namespace Microsoft.PythonTools {
         /// Checks to see if this is a REPL buffer starting with a extensible command such as %cls, %load, etc...
         /// </summary>
         internal static bool IsReplBufferWithCommand(this ITextSnapshot snapshot) {
-            return snapshot.TextBuffer.Properties.ContainsProperty(typeof(IInteractiveEvaluator)) &&
+            return snapshot.TextBuffer.IsReplBuffer() &&
                    snapshot.Length != 0 &&
                    (snapshot[0] == '%' || snapshot[0] == '$'); // IPython and normal repl commands
+        }
+
+        internal static bool IsReplBuffer(this ITextBuffer buffer) {
+            return buffer.Properties.ContainsProperty(typeof(IInteractiveEvaluator));
         }
 
         internal static bool IsOpenGrouping(this ClassificationSpan span) {

@@ -280,6 +280,9 @@
     <Compile Include="PythonTools\Editor\Formatting\PythonFormatterYapf.cs" />
     <Compile Include="PythonTools\Editor\Formatting\PythonFormatter.cs" />
     <Compile Include="PythonTools\Editor\Formatting\LspDiffTextEditFactory.cs" />
+    <Compile Include="PythonTools\Editor\PythonEditorServices.cs" />
+    <Compile Include="PythonTools\Intellisense\PythonKeywords.cs" />
+    <Compile Include="PythonTools\Intellisense\ReverseExpressionParser.cs" />
     <Compile Include="PythonTools\LanguageServerClient\CustomCancellationStrategy.cs" />
     <Compile Include="PythonTools\LanguageServerClient\FileWatcher\Listener.cs" />
     <Compile Include="PythonTools\LanguageServerClient\LiveShareExtensions.cs" />
@@ -371,6 +374,8 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="PythonTools\Options\PythonAdvancedEditorOptions.cs" />
+    <Compile Include="PythonTools\PythonClassifier.cs" />
+    <Compile Include="PythonTools\PythonClassifierProvider.cs" />
     <Compile Include="PythonTools\PythonLanguageInfo.cs" />
     <Compile Include="PythonTools\Options\PythonCondaOptions.cs" />
     <Compile Include="PythonTools\Options\PythonCondaOptionsControl.cs">
@@ -448,8 +453,12 @@
     <Compile Include="PythonTools\LanguageServerClient\PythonLanguageClientCustomTarget.cs" />
     <Compile Include="PythonTools\Intellisense\PythonMemberTypeExtensions.cs" />
     <Compile Include="PythonTools\Editor\TokenCache.cs" />
+    <Compile Include="PythonTools\Repl\Completion\CompletionSource.cs" />
+    <Compile Include="PythonTools\Repl\Completion\CompletionSourceProvider.cs" />
     <Compile Include="PythonTools\Repl\Completion\ExpressionFinder.cs" />
     <Compile Include="PythonTools\Repl\Completion\FindExpressionOptions.cs" />
+    <Compile Include="PythonTools\Repl\Completion\IntellisenseController.cs" />
+    <Compile Include="PythonTools\Repl\Completion\IntellisenseControllerProvider.cs" />
     <Compile Include="PythonTools\Utility\MessageBox.cs" />
     <Compile Include="PythonTools\Utility\Interpreters.cs" />
     <Compile Include="PythonTools\Utility\Settings.cs" />

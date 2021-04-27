@@ -16,7 +16,7 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.PythonTools.Analysis;
+using Microsoft.Python.Parsing;
 using Microsoft.PythonTools.Editor;
 using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
@@ -38,7 +38,7 @@ namespace Microsoft.PythonTools.Intellisense {
         };
 
 
-        public ReverseExpressionParser(ITextSnapshot snapshot, ITextBuffer buffer, ITrackingSpan span) {
+        public ReverseExpressionParser(ITextSnapshot snapshot, ITextBuffer buffer, ITrackingSpan span, PythonEditorServices services) {
             _snapshot = snapshot;
             _buffer = buffer;
             _span = span;
@@ -48,13 +48,13 @@ namespace Microsoft.PythonTools.Intellisense {
 
             var targetSpan = new Span(line.Start.Position, span.GetEndPoint(snapshot).Position - line.Start.Position);
 
-            _classifier = _buffer.GetPythonClassifier();
+            _classifier = services.ComponentModel.GetService<PythonClassifierProvider>().GetClassifier(buffer) as PythonClassifier;
             if (_classifier == null) {
                 throw new ArgumentException(Strings.ReverseExpressionParserFailedToGetClassifierFromBufferException);
             }
         }
 
-        internal static IEnumerator<ClassificationSpan> ForwardClassificationSpanEnumerator(PythonClassifier classifier, SnapshotPoint startPoint) {
+        internal static IEnumerator<ClassificationSpan> ForwardClassificationSpanEnumerator(IClassifier classifier, SnapshotPoint startPoint) {
             var startLine = startPoint.GetContainingLine();
             int curLine = startLine.LineNumber;
             if (startPoint > startLine.End) {
@@ -81,7 +81,7 @@ namespace Microsoft.PythonTools.Intellisense {
             }
         }
 
-        internal static IEnumerator<ClassificationSpan> ReverseClassificationSpanEnumerator(PythonClassifier classifier, SnapshotPoint startPoint) {
+        internal static IEnumerator<ClassificationSpan> ReverseClassificationSpanEnumerator(IClassifier classifier, SnapshotPoint startPoint) {
             var startLine = startPoint.GetContainingLine();
             int curLine = startLine.LineNumber;
             var tokens = classifier.GetClassificationSpans(new SnapshotSpan(startLine.Start, startPoint));
@@ -189,7 +189,7 @@ namespace Microsoft.PythonTools.Intellisense {
             // Walks backwards over all the lines
             var enumerator = ReverseClassificationSpanEnumerator(Classifier, _span.GetSpan(_snapshot).End);
             if (enumerator.MoveNext()) {
-                if (enumerator.Current != null && enumerator.Current.ClassificationType == this.Classifier.Provider.StringLiteral) {
+                if (enumerator.Current != null && enumerator.Current.ClassificationType == Classifier.Provider.StringLiteral) {
                     return enumerator.Current.Span;
                 }
 
@@ -452,7 +452,7 @@ namespace Microsoft.PythonTools.Intellisense {
         internal static bool IsInGrouping(ITextSnapshot snapshot, IEnumerable<TrackingTokenInfo> tokensInReverse) {
             int nesting = 0;
             foreach (var token in tokensInReverse) {
-                if (token.Category == Parsing.TokenCategory.Grouping) {
+                if (token.Category == TokenCategory.Grouping) {
                     var t = token.GetText(snapshot);
                     if (t.IsCloseGrouping()) {
                         nesting++;
@@ -461,11 +461,11 @@ namespace Microsoft.PythonTools.Intellisense {
                             return true;
                         }
                     }
-                } else if (token.Category == Parsing.TokenCategory.Delimiter) {
+                } else if (token.Category == TokenCategory.Delimiter) {
                     if (nesting == 0 && token.GetText(snapshot) == ",") {
                         return true;
                     }
-                } else if (token.Category == Parsing.TokenCategory.Keyword) {
+                } else if (token.Category == TokenCategory.Keyword) {
                     if (PythonKeywords.IsOnlyStatementKeyword(token.GetText(snapshot))) {
                         return false;
                     }
