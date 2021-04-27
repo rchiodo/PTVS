@@ -47,6 +47,9 @@ namespace Microsoft.PythonTools.LanguageServerClient {
 
             return position;
         }
+        internal static Position GetPosition(this ITrackingPoint point) {
+            return point.GetPoint(point.TextBuffer.CurrentSnapshot).GetPosition();
+        }
 
         internal static SnapshotPoint? GetCaretPointAtSubjectBuffer(this ITextView textView, ITextBuffer textBuffer) {
             return textView.GetPointAtSubjectBuffer(textView.Caret.Position.BufferPosition, textBuffer);

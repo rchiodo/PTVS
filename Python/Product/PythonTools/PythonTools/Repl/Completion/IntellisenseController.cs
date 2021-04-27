@@ -37,6 +37,8 @@ using Microsoft.VisualStudio.Text.IncrementalSearch;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using VSConstants = Microsoft.VisualStudio.VSConstants;
+using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
+using Microsoft.PythonTools.LanguageServerClient;
 
 namespace Microsoft.PythonTools.Repl.Completion {
     internal sealed class IntellisenseController : IIntellisenseController, IOleCommandTarget {
@@ -434,6 +436,29 @@ namespace Microsoft.PythonTools.Repl.Completion {
                 return;
             }
 
+            // Trigger the async task for the completions
+            var triggerPoint = session.GetTriggerPoint(_textView.TextBuffer);
+            if (_textView.TextBuffer.Properties.TryGetProperty(typeof(IInteractiveEvaluator), out IInteractiveEvaluator evaluator)) {
+                if (evaluator is SelectableReplEvaluator replEvaluator) {
+                    // Setup the context.
+                    var context = new LSP.CompletionContext();
+                    context.TriggerCharacter = triggerChar.ToString();
+                    context.TriggerKind = LSP.CompletionTriggerKind.TriggerCharacter;
+
+                    // Save the cancel source so we can dismiss if a new session is created
+                    var cancelSource = new CancellationTokenSource();
+                    session.Properties.AddProperty(PropertyConstants.CancelTokenSource, cancelSource);
+
+                    // Translate the trigger point into an LSP position
+                    var position = triggerPoint.GetPosition();
+                    var task = replEvaluator.GetAnalysisCompletions(position, context, cancelSource.Token);
+
+                    // Add the task into buffer so we can use it in the completion session
+                    _textView.TextBuffer.Properties.AddProperty(PropertyConstants.CompletionTaskKey, task);
+                }
+            }
+
+
             session.Start();
             if (!session.IsStarted) {
                 Volatile.Write(ref _activeSession, null);
@@ -471,6 +496,11 @@ namespace Microsoft.PythonTools.Repl.Completion {
             if (session == null) {
                 Debug.Fail("invalid type passed to event");
                 return;
+            }
+            if (session.Properties.TryGetProperty(PropertyConstants.CancelTokenSource, out CancellationTokenSource tokenSource)) {
+                tokenSource.Cancel();
+                session.Properties.RemoveProperty(PropertyConstants.CancelTokenSource);
+                session.Properties.RemoveProperty(PropertyConstants.CompletionTaskKey);
             }
             session.Committed -= OnCompletionSessionDismissedOrCommitted;
             session.Dismissed -= OnCompletionSessionDismissedOrCommitted;

@@ -316,8 +316,8 @@ namespace Microsoft.PythonTools.Repl {
 
         public abstract void AbortExecution();
 
-        public Task<LSP.CompletionItem[]> GetAnalysisCompletions(SnapshotPoint triggerPoint, LSP.CompletionContext context, CancellationToken token) {
-            return Document.GetCompletions(triggerPoint, context, token);
+        public Task<LSP.CompletionItem[]> GetAnalysisCompletions(LSP.Position position, LSP.CompletionContext context, CancellationToken token) {
+            return Document.GetCompletions(position, context, token);
         }
 
         public bool CanExecuteCode(string text) {

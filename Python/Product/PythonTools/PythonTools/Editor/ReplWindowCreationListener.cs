@@ -40,8 +40,8 @@ namespace Microsoft.PythonTools.Editor {
         }
 
         public IOleCommandTarget GetCommandTarget(IWpfTextView textView, IOleCommandTarget nextTarget) {
-            if (!textView.TextBuffer.IsReplBuffer()) {
-                // We want default handling when this isn't a repl buffer
+            if (textView.TextBuffer.ContentType.IsOfType(CodeRemoteContentDefinition.CodeRemoteContentTypeName)) {
+                // We want default handling when this is a remote buffer
                 return null;
             }
 

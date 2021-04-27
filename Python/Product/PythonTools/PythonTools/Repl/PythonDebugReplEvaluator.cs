@@ -631,7 +631,7 @@ namespace Microsoft.PythonTools.Repl {
             return _activeEvaluator?.GetPrompt();
         }
 
-        public Task<LSP.CompletionItem[]> GetAnalysisCompletions(SnapshotPoint triggerPoint, LSP.CompletionContext context, CancellationToken token) {
+        public Task<LSP.CompletionItem[]> GetAnalysisCompletions(LSP.Position triggerPoint, LSP.CompletionContext context, CancellationToken token) {
             // No analysis completions for debug repl
             return Task.FromResult(Array.Empty<LSP.CompletionItem>());
         }

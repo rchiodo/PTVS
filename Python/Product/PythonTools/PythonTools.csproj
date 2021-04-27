@@ -455,6 +455,7 @@
     <Compile Include="PythonTools\Editor\TokenCache.cs" />
     <Compile Include="PythonTools\Repl\Completion\CompletionSource.cs" />
     <Compile Include="PythonTools\Repl\Completion\CompletionSourceProvider.cs" />
+    <Compile Include="PythonTools\Repl\Completion\PropertyConstants.cs" />
     <Compile Include="PythonTools\Repl\Completion\ExpressionFinder.cs" />
     <Compile Include="PythonTools\Repl\Completion\FindExpressionOptions.cs" />
     <Compile Include="PythonTools\Repl\Completion\IntellisenseController.cs" />

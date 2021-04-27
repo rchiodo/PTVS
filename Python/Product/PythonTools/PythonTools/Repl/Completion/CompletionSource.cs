@@ -19,8 +19,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.InteractiveWindow;
 using Microsoft.VisualStudio.Language.Intellisense;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
 using Microsoft.VisualStudio.Text;
+using LSP = Microsoft.VisualStudio.LanguageServer.Protocol;
 
 namespace Microsoft.PythonTools.Repl.Completion {
     static class CompletionSessionExtensions {
@@ -59,11 +59,10 @@ namespace Microsoft.PythonTools.Repl.Completion {
         }
 
         public void AugmentCompletionSession(ICompletionSession session, IList<CompletionSet> completionSets) {
-            var textBuffer = _textBuffer;
-            var triggerPoint = session.GetTriggerPoint(textBuffer);
-            if (textBuffer.Properties.TryGetProperty(typeof(IInteractiveEvaluator), out IInteractiveEvaluator evaluator)) {
-                if (evaluator is PythonCommonInteractiveEvaluator commonEvaluator) {
-                    System.Diagnostics.Debug.WriteLine("Might be able to get completions");
+            if (_textBuffer.Properties.TryGetProperty(PropertyConstants.CompletionTaskKey, out Task<LSP.CompletionItem[]> task)) {
+                if (task.IsCompleted) {
+                    var items = task.Result;
+                    completionSets.Add(new CompletionSet());
                 }
             }
         }
