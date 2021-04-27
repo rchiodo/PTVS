@@ -9,12 +9,12 @@ rem
 rem This script should be run as an administrator.
 rem
 
-echo This script should be run as an administrator.
+echo This script should be run as an administrator and from the VS developer command prompt.
 
 set D=%~dp0
 
 rem Guess some directories for Visual Studio 16
-call :docopy "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Preview\MSBuild\Microsoft\VisualStudio\v16.0"
+call :docopy "%VSINSTALLDIR%\MSBuild\Microsoft\VisualStudio\v16.0"
 if errorlevel 1 call :docopy "%SystemDrive%\VS\MSBuild\Microsoft\VisualStudio\v15.0"
 if errorlevel 1 call :docopy "%ProgramFiles(x86)%\MSBuild\Microsoft\VisualStudio\v15.0"
 
