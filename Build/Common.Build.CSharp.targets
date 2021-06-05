@@ -26,6 +26,8 @@
       <_NugetAssemblies Include="$(PackagesPath)\Microsoft.Python.*\lib\netstandard2.0\Microsoft.Python.*.dll" />
       <_NugetAssemblies Include="$(PackagesPath)\Microsoft.Extensions.*\lib\netstandard2.0\Microsoft.Extensions.*.dll" />
       <_NugetAssemblies Include="$(PackagesPath)\StreamJsonRpc*\lib\netstandard2.0\StreamJsonRpc.dll" />
+      <_NugetAssemblies Include="$(PackagesPath)\Microsoft.Test*\lib\net46\Microsoft.Test.*.dll" />
+      <_NugetAssemblies Include="$(PackagesPath)\Microsoft.Test*\lib\net472\Microsoft.Test.*.dll" />
     </ItemGroup>
     <PropertyGroup>
       <AssemblySearchPaths>

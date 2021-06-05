@@ -27,6 +27,7 @@
     <ProjectFile Include="PythonToolsMockTests\PythonToolsMockTests.csproj" />
     <ProjectFile Include="ProjectUITests\ProjectUITests.csproj" />
     <ProjectFile Include="ProjectUITestsRunner\ProjectUITestsRunner.csproj" />
+    <ProjectFile Include="Apex\IntegrationTests.csproj" />
   </ItemGroup>
 
   <Import Project="$(TargetsPath)\Common.Build.Traversal.targets" />

@@ -15,7 +15,8 @@ $need_symlink = @(
     "Microsoft.VisualStudio.Interop",
     "Microsoft.VSSDK.BuildTools",
     "Microsoft.VSSDK.Debugger.VSDConfigTool",
-    "Newtonsoft.Json"
+    "Newtonsoft.Json",
+    "Microsoft.Test.Apex.VisualStudio"
 )
 
 if (-not $vstarget) {
