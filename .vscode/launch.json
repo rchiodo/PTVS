@@ -10,7 +10,9 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "cwd": "${fileDirname}"
+            "args": ["py2exe"],
+            "cwd": "${fileDirname}",
+            "justMyCode": false
         }
     ]
 }

@@ -68,6 +68,11 @@ try {
     Write-Host "Downloading debugpy version $debugpyver"
     $debugpyarglist = "install_debugpy.py", $debugpyver, "`"$outdir`""
     Start-Process -Wait -NoNewWindow "$outdir\python\tools\python.exe" -ErrorAction Stop -ArgumentList $debugpyarglist
+    Write-Host "Installing py2exe for debugpy executable creation"
+    $installpy2exeargs = "-m", "pip", "install", "py2exe"
+    Start-Process -Wait -NoNewWindow "$outdir\python\tools\python.exe" -ErrorAction Stop -ArgumentList $installpy2exeargs
+    Write-Host "Building exes for debugpy"
+    
 
     Write-Host "Updating Microsoft.Python.*.dll pdbs to be windows format"
     Get-ChildItem "$outdir\Microsoft.Python.Parsing\lib\netstandard2.0" -Filter "*.pdb" | ForEach-Object {
