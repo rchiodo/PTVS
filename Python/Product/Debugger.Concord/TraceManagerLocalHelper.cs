@@ -78,21 +78,31 @@ namespace Microsoft.PythonTools.Debugger.Concord {
             public readonly long f_back, f_code, f_globals, f_locals, f_lineno;
 
             public PyFrameObject_FieldOffsets(DkmProcess process) {
-                if (process.GetPythonRuntimeInfo().LanguageVersion <= PythonLanguageVersion.V35) {
+                var languageVersion = process.GetPythonRuntimeInfo().LanguageVersion;
+                if (languageVersion <= PythonLanguageVersion.V35) {
                     var fields = StructProxy.GetStructFields<PyFrameObject, PyFrameObject.Fields_27_35>(process);
                     f_back = -1;
                     f_code = fields.f_code.Offset;
                     f_globals = fields.f_globals.Offset;
                     f_locals = fields.f_locals.Offset;
                     f_lineno = fields.f_lineno.Offset;
-                } else {
-                    var fields = StructProxy.GetStructFields<PyFrameObject, PyFrameObject.Fields_36>(process);
+                } else if (languageVersion <= PythonLanguageVersion.V310) {
+                    var fields = StructProxy.GetStructFields<PyFrameObject, PyFrameObject.Fields_36_310>(process);
                     f_back = fields.f_back.Offset;
                     f_code = fields.f_code.Offset;
                     f_globals = fields.f_globals.Offset;
                     f_locals = fields.f_locals.Offset;
                     f_lineno = fields.f_lineno.Offset;
-                } 
+                } else {
+                    var fields = StructProxy.GetStructFields<PyFrameObject, PyFrameObject.Fields_311>(process);
+                    f_back = fields.f_back.Offset;
+                    var frameOffset = fields.f_frame.Offset;
+                    var frameFields = StructProxy.GetStructFields<PyInterpreterFrame, PyInterpreterFrame.Fields>(process);
+                    f_code = frameFields.f_code.Offset + frameOffset;
+                    f_globals = frameFields.f_globals.Offset + frameOffset;
+                    f_locals = frameFields.f_locals.Offset + frameOffset;
+                    f_lineno = fields.f_lineno.Offset + frameOffset;
+                }
             }
         }
 

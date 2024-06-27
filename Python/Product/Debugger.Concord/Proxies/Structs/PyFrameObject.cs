@@ -33,13 +33,19 @@ namespace Microsoft.PythonTools.Debugger.Concord.Proxies.Structs {
             public StructField<ArrayProxy<PointerProxy<PyObject>>> f_localsplus;
         }
 
-        public class Fields_36 {
+        public class Fields_36_310 {
             public StructField<PointerProxy<PyFrameObject>> f_back;
             public StructField<PointerProxy<PyCodeObject>> f_code;
             public StructField<PointerProxy<PyDictObject>> f_globals;
             public StructField<PointerProxy<PyDictObject>> f_locals;
             public StructField<Int32Proxy> f_lineno;
             public StructField<ArrayProxy<PointerProxy<PyObject>>> f_localsplus;
+        }
+
+        public class Fields_311 {
+            public StructField<PointerProxy<PyFrameObject>> f_back;
+            public StructField<PointerProxy<PyInterpreterFrame>> f_frame;
+            public StructField<Int32Proxy> f_lineno;
         }
 
         private readonly object _fields;
@@ -51,8 +57,12 @@ namespace Microsoft.PythonTools.Debugger.Concord.Proxies.Structs {
                 Fields_27_35 fields;
                 InitializeStruct(this, out fields);
                 _fields = fields;
+            } else if (pythonInfo.LanguageVersion <= PythonLanguageVersion.V310) {
+                Fields_36_310 fields;
+                InitializeStruct(this, out fields);
+                _fields = fields;
             } else {
-                Fields_36 fields;
+                Fields_311 fields;
                 InitializeStruct(this, out fields);
                 _fields = fields;
             }
@@ -117,27 +127,61 @@ namespace Microsoft.PythonTools.Debugger.Concord.Proxies.Structs {
         }
 
         public PointerProxy<PyFrameObject> f_back {
-            get { return GetFieldProxy((_fields as Fields_36)?.f_back); }
+            get { return GetFieldProxy((_fields as Fields_36_310)?.f_back ?? (_fields as Fields_311)?.f_back); }
         }
 
         public PointerProxy<PyCodeObject> f_code {
-            get { return GetFieldProxy((_fields as Fields_36)?.f_code ?? (_fields as Fields_27_35)?.f_code); }
+            get {
+                var code = (_fields as Fields_36_310)?.f_code;
+                if (code != null) {
+                    return GetFieldProxy(code);
+                }
+                return GetFieldProxy((_fields as Fields_311).f_frame).Read().f_code;
+            }
         }
 
         public PointerProxy<PyDictObject> f_globals {
-            get { return GetFieldProxy((_fields as Fields_36)?.f_globals ?? (_fields as Fields_27_35)?.f_globals); }
+            get {
+                var globals = (_fields as Fields_36_310)?.f_globals;
+                if (globals != null) {
+                    return GetFieldProxy(globals);
+                }
+                return GetFieldProxy((_fields as Fields_311).f_frame).Read().f_globals;
+            }
         }
 
         public PointerProxy<PyDictObject> f_locals {
-            get { return GetFieldProxy((_fields as Fields_36)?.f_locals ?? (_fields as Fields_27_35)?.f_locals); }
+            get {
+                var locals = (_fields as Fields_36_310)?.f_locals;
+                if (locals != null) {
+                    return GetFieldProxy(locals);
+                }
+                return GetFieldProxy((_fields as Fields_311).f_frame).Read().f_locals;
+            }
         }
 
         public Int32Proxy f_lineno {
-            get { return GetFieldProxy((_fields as Fields_36)?.f_lineno ?? (_fields as Fields_27_35)?.f_lineno); }
+            get {
+                var code = (_fields as Fields_36_310)?.f_lineno;
+                if (code != null) {
+                    return GetFieldProxy(code);
+                }
+                code = (_fields as Fields_311)?.f_lineno;
+                if (code != null) {
+                    return GetFieldProxy(code);
+                }
+                return GetFieldProxy((_fields as Fields_27_35).f_lineno);
+            }
         }
 
         public ArrayProxy<PointerProxy<PyObject>> f_localsplus {
-            get { return GetFieldProxy((_fields as Fields_36)?.f_localsplus ?? (_fields as Fields_27_35)?.f_localsplus); }
+            get {
+                var locals = (_fields as Fields_36_310)?.f_localsplus;
+                if (locals != null) {
+                    return GetFieldProxy(locals);
+                }
+                return GetFieldProxy((_fields as Fields_311).f_frame).Read().f_localsplus;
+            }
         }
 
     }

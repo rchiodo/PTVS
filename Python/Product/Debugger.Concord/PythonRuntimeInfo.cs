@@ -76,6 +76,7 @@ namespace Microsoft.PythonTools.Debugger.Concord {
                 case "38": return PythonLanguageVersion.V38;
                 case "39": return PythonLanguageVersion.V39;
                 case "310": return PythonLanguageVersion.V310;
+                case "311": return PythonLanguageVersion.V311;
                 default: return PythonLanguageVersion.None;
             }
         }
